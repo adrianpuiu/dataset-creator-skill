@@ -1,7 +1,7 @@
 ---
 name: code-agnostic-dataset-extractor
-version: 1.0.0
-description: A code-agnostic skill for extracting training data from any codebase. Works with Python, JavaScript, TypeScript, Go, Rust, and other languages to extract instruction-input-output JSONL pairs for LLM training data generation. Use when analyzing code repositories to create training datasets, extracting code patterns, or generating instruction tuning data from source code.
+version: 2.0.0
+description: Extract LLM training data from any codebase by analyzing source code and generating instruction-input-output JSONL pairs. Agent-aware: recognizes tools, skills, agent patterns, and configurations. Use this skill when asked to extract training data, create datasets from code, or generate instruction tuning examples from a repository.
 tags:
   - dataset
   - extraction
@@ -9,347 +9,312 @@ tags:
   - llm
   - code-agnostic
   - repository-analysis
+  - agent-aware
 author: Claude AI
 license: Apache 2.0
 ---
 
-# Code-Agnostic Dataset Extractor
+# Code-Agnostic Dataset Extractor (Agent-Aware)
 
-You are a **Dataset Extraction Specialist** capable of analyzing source code from **any programming language** and extracting high-quality training data in JSONL format.
+You are an **Agentic Dataset Extraction Specialist**. Your job is to actively explore codebases, understand code patterns, and generate high-quality JSONL training data.
 
-## Core Principles
+**Agent-Aware:** You recognize and properly extract:
+- **Agent patterns** - Sequential, Interactive, Autonomous, Monitoring agents
+- **Tool definitions** - Functions that wrap external capabilities
+- **Skill definitions** - Reusable capability functions
+- **Agent configuration** - Config, settings, initialization
+- **Tool execution** - Calling tools, handling results, error handling
+- **Enterprise integrations** - Jira, GitHub, JFrog, Jenkins, Slack, AWS, Docker, etc.
+- **DevOps workflows** - CI/CD, deployments, artifact management, release automation
 
-### Language Agnostic Approach
+## Your Workflow
 
-1. **Adapt to the language** - Identify file extensions and language-specific syntax
-2. **Extract universal patterns** - Functions, classes, imports, decorators, type annotations
-3. **Map to canonical patterns** - Convert language-specific syntax to standard concepts
+### Step 1: Repository Discovery
 
-### Universal Code Patterns to Extract
+Explore the codebase to understand its structure:
 
-#### 1. Function/Method Definitions
-- Basic functions
-- Methods with parameters
-- Async functions (Python: `async def`, JS: `async function()`, TS: `async function()`)
-- Generator functions (Python: `yield`, JS/TS: `function*`)
-- Arrow functions (JS/TS only)
+1. **List source files** by language
+   ```
+   glob "**/*.py"    # Python
+   glob "**/*.ts"    # TypeScript
+   glob "**/*.go"    # Go
+   ```
 
-#### 2. Class Definitions
-- Class declarations
-- Class inheritance
-- Constructor functions
-- Property definitions
-- Static methods
-- Private/public members
+2. **Identify the repository type**
+   - Is this an agent framework?
+   - Are there tool definitions?
+   - Are there skill/capability definitions?
+   - What patterns are present?
 
-#### 3. Import/Module Patterns
-- ES6 imports (JS/TS)
-- CommonJS require (JS)
-- Python imports
-- Go imports
-- Rust use statements
+3. **Report your findings**
+   ```
+   Found:
+   - Agent framework code (tools, skills)
+   - Web scraping tools
+   - Data processing agents
+   ```
 
-#### 4. Decorator/Annotation Patterns
-- Python `@decorator`
-- TypeScript decorators (experimental)
-- Java annotations
-- C# attributes
-- Rust macros/attributes
+### Step 2: Systematic Code Reading
 
-#### 5. Type System Patterns
-- Type aliases
-- Interface definitions
-- Type inference
-- Generic/Template types
-- Union types
-- Optional types
+Read files and extract patterns. For agent-related code, be extra thorough:
 
-#### 6. Async/Await Patterns
-- Async/await syntax
-- Promise handling
-- Callback patterns
-- Async iterators
+**Agent-specific patterns to capture:**
+- Tool registration/definition functions
+- Skill/capability implementations
+- Agent run/execute loops
+- Configuration parsing
+- Result formatting
+- Error handling patterns
 
-#### 7. Error Handling
-- Try/catch blocks
-- Error throwing
-- Error propagation
-- Finally blocks
+### Step 3: Generate JSONL Entries
 
-#### 8. File System Operations
-- File reading/writing
-- Path manipulation
-- Directory operations
-- Stream handling
+Generate descriptive entries with agent-aware context:
 
-#### 9. Testing Patterns
-- Test setup/teardown
-- Assertions
-- Mocks and stubs
-- Test doubles
-
-#### 10. Configuration Patterns
-- Config objects
-- Environment variables
-- CLI argument parsing
-- Configuration files
-
-## Language-Specific Mapping Guide
-
-### Python → Canonical
-- `async def func()` → "async function"
-- `@decorator` → "decorator pattern"
-- `class Foo:` → "class definition"
-- `from module import thing` → "import statement"
-- `try/except` → "try/catch block"
-
-### JavaScript/TypeScript → Canonical
-- `async function()` → "async function"
-- `import { x } from 'y'` → "import statement"
-- `export default` → "export pattern"
-- `class Foo extends Bar` → "class inheritance"
-- `interface Foo` → "interface definition"
-- `try/catch` → "try/catch block"
-- `Promise` → "async/promise pattern"
-
-### Go → Canonical
-- `func Foo() {}` → "function definition"
-- `import "package"` → "import statement"
-- `type Foo interface {}` → "interface definition"
-- `defer` → "cleanup pattern"
-- `go func()` → "async/goroutine"
-
-### Rust → Canonical
-- `fn foo() {}` → "function definition"
-- `use module::item;` → "import statement"
-- `async fn` → "async function"
-- `trait Trait` → "interface/trait definition"
-- `impl Trait for Type` → "implementation"
-
-## Extraction Rules
-
-### Rule 1: Granularity
-Extract at multiple levels:
-- **Complete examples** - Full files with multiple related patterns
-- **Functions** - Individual function/method implementations
-- **Blocks** - Control flow blocks, logical sections
-- **Lines** - Individual statements (for very granular patterns)
-
-### Rule 2: Context Matters
-Always include necessary context:
-- Required imports
-- Type definitions
-- Helper functions
-- Setup code
-
-### Rule 3: Instruction Format
-Instructions should be:
-- **Clear and specific** - "Create a function that X" not "How do I..."
-- **Language-agnostic phrasing** - "Define a function" not "def a function"
-- **Action-oriented** - Start with verbs (Create, Define, Implement, Add, Use, etc)
-
-### Rule 4: Input/Output Format
 ```json
 {
-  "instruction": "Create an async function that fetches data from an API and returns the parsed JSON response",
-  "input": "// Import statement and fetch API\nimport { fetch } from 'some-http-library';\n\n// Type definition for the response\ninterface ApiResponse {\n  data: unknown;\n  status: number;\n}",
-  "output": "async function fetchData<T>(url: string): Promise<T> {\n  const response = await fetch(url);\n  if (!response.ok) {\n    throw new Error(`HTTP ${response.status}: ${response.statusText}`);\n  }\n  return response.json();\n}"
+  "instruction": "Create a web scraping tool that takes a URL and returns the page content",
+  "input": "from typing import Optional\nimport httpx\nfrom bs4 import BeautifulSoup",
+  "output": "async def scrape_url(url: str, timeout: int = 30) -> str:\n    ..."
 }
 ```
 
-## Workflow
+For agent patterns, use specific instructions:
 
-### Phase 1: Repository Analysis
-Use `scripts/analyze_repo.py` to scan the codebase:
-```bash
-python scripts/analyze_repo.py --path /path/to/repo --output analysis.json
+| Pattern | Instruction Template |
+|---------|---------------------|
+| Tool definition | "Create a tool named {name} that {does_what} with {params}" |
+| Agent run loop | "Implement the agent's run method that {does_what}" |
+| Config class | "Define an agent configuration with {fields}" |
+| Skill function | "Create a skill function for {capability} that takes {params}" |
+| Tool execution | "Add a method to execute the {tool_name} tool with error handling" |
+
+## Agent-Aware Extraction Rules
+
+### Agent Patterns to Recognize
+
+#### 1. Tool Definition Pattern
+
+A function/class that wraps an external capability:
+
+```python
+# Recognize this pattern:
+class WebSearchTool:
+    name = "web_search"
+    def run(self, query: str) -> str:
+        ...
 ```
 
-### Phase 2: Parallel Extraction
-Use `scripts/extract_patterns.py` to extract code patterns:
-```bash
-python scripts/extract_patterns.py --repo /path/to/repo --output dataset.jsonl
+**Instruction:** "Create a tool named web_search that takes a query and returns search results"
+
+#### 2. Agent Run Loop Pattern
+
+The main execution loop of an agent:
+
+```python
+# Recognize this pattern:
+async def run(self, task: str) -> AgentResult:
+    # Plan
+    # Execute tools
+    # Format output
+    return result
 ```
 
-### Phase 3: Aggregation
-Use `scripts/aggregate.py` to combine and validate:
-```bash
-python scripts/aggregate.py --input_dir ./extracted --output training_dataset.jsonl
+**Instruction:** "Implement an async run method that takes a task, executes tools, and returns a formatted result"
+
+#### 3. Configuration Pattern
+
+Agent/settings configuration:
+
+```python
+# Recognize this pattern:
+@dataclass
+class AgentConfig:
+    model: str
+    max_iterations: int
+    tools: list[str]
 ```
 
-### Phase 4: Output
-Use `scripts/convert_format.py` to convert between formats:
-```bash
-# Instruction → Conversational format
-python scripts/convert_format.py --input instruction_data.jsonl --output conversational.jsonl --format conversational
+**Instruction:** "Define an agent configuration dataclass with model, max_iterations, and tools fields"
+
+#### 4. Skill/Capability Pattern
+
+Reusable agent functions:
+
+```python
+# Recognize this pattern:
+async def summarize_text(text: str) -> str:
+    ...
 ```
 
-## Common Patterns by Category
+**Instruction:** "Create a skill function named summarize_text that takes text and returns a summary"
 
-### Pattern 1: Basic Function
+#### 5. Tool Registration Pattern
+
+Registering tools with an agent:
+
+```python
+# Recognize this pattern:
+def register_tool(self, tool: Tool) -> None:
+    self.tools[tool.name] = tool
+```
+
+**Instruction:** "Add a method to register a tool with the agent"
+
+#### 6. Result Formatting Pattern
+
+Formatting agent outputs:
+
+```python
+# Recognize this pattern:
+def format_result(self, result: Any) -> str:
+    ...
+```
+
+**Instruction:** "Create a method to format agent results as output"
+
+### Enterprise Integration Patterns
+
+Recognize and extract patterns for enterprise service integrations:
+
+| Service | Pattern Indicators | Instruction Template |
+|---------|-------------------|---------------------|
+| **Jira** | `JiraClient`, `create_issue`, `transition` | "Create a Jira client with methods for creating and updating issues" |
+| **GitHub** | `GitHubClient`, `create_pr`, `get_file` | "Create a GitHub client with methods for PRs, files, and operations" |
+| **JFrog** | `ArtifactoryClient`, `upload_artifact` | "Create a JFrog Artifactory client with upload and download methods" |
+| **Jenkins** | `JenkinsClient`, `trigger_build` | "Create a Jenkins client with methods to trigger builds and get status" |
+| **Slack** | `SlackClient`, `send_message` | "Create a Slack client with message sending and file upload methods" |
+| **AWS S3** | `S3Client`, `upload_file` | "Create an S3 client with upload, download, and list methods" |
+| **Docker** | `DockerRegistry`, `push_image` | "Create a Docker registry client with push and pull methods" |
+| **Email** | `EmailClient`, `send_email` | "Create an email client with SMTP sending capability" |
+
+### DevOps Workflow Patterns
+
+Multi-service integration agents:
+
+| Workflow | Services | Instruction Template |
+|----------|----------|---------------------|
+| **Deployment** | Jira + JFrog + Environment | "Create a deployment agent that downloads artifacts from JFrog, deploys to environment, and updates Jira" |
+| **CI/CD Pipeline** | Jenkins + JFrog + GitHub + Slack | "Create a CI/CD agent that runs Jenkins builds, pushes to JFrog, creates GitHub releases, and notifies on Slack" |
+| **Issue Resolution** | Jira + GitHub + Slack | "Create an agent that monitors Jira issues, commits fixes via GitHub, and sends notifications on Slack" |
+| **Release** | GitHub + JFrog + Jira + Email | "Create a release agent that creates GitHub tags, uploads artifacts to JFrog, updates Jira tickets, and sends email notifications" |
+| **Monitoring** | Jenkins + Slack + PagerDuty | "Create a monitoring agent that watches Jenkins jobs and sends alerts via Slack and PagerDuty" |
+
+### Language-Specific Agent Patterns
+
+#### Python Agent Patterns
+
+| Pattern | Example | Instruction Template |
+|---------|---------|---------------------|
+| Tool interface | `interface Tool` | "Define a tool interface with execute method" |
+| Agent class | `class Agent { run() }` | "Create an agent class with async run method" |
+| Tool definition | `const tool: Tool =` | "Define a tool object with name and handler" |
+| Config type | `interface AgentConfig` | "Define an agent configuration type" |
+
+#### Go Agent Patterns
+
+| Pattern | Example | Instruction Template |
+|---------|---------|---------------------|
+| Tool struct | `type Tool struct` | "Define a tool struct with Name and Run fields" |
+| Agent interface | `type Agent interface` | "Define an agent interface with Run method" |
+| Tool function | `func (t *Tool) Run()` | "Implement the Run method for a tool" |
+
+### What Makes a Good Agent Entry
+
+**DO EXTRACT:**
+- Complete tool definitions
+- Agent run loops with error handling
+- Configuration definitions
+- Skill/capability functions
+- Tool registration and management
+- Result formatting
+- State management
+- Multi-step agent logic
+
+**WITH CONTEXT IN INPUT:**
+- Required imports (e.g., `from abc import ABC`)
+- Base classes being extended
+- Type definitions referenced
+- Related dependencies (e.g., `from pydantic_ai import Agent`)
+
+## Example: Extracting an Agent
+
+**Source Code:**
+```python
+class ResearchAgent:
+    def __init__(self, tools: list[Tool]):
+        self.tools = {t.name: t for t in tools}
+
+    async def run(self, query: str) -> str:
+        plan = await self.plan(query)
+        results = []
+        for step in plan:
+            result = await self.tools[step.tool].run(step.args)
+            results.append(result)
+        return self.format_results(results)
+```
+
+**Extracted Entry:**
 ```json
-{"instruction": "Define a function that takes two parameters and returns their sum", "input": "", "output": "function add(a, b) {\n  return a + b;\n}"}
+{
+  "instruction": "Implement an async run method for a research agent that plans steps, executes tools, and formats results",
+  "input": "from typing import Any\n\nasync def plan(self, query: str) -> list[Step]: ...\n\ndef format_results(self, results: list) -> str: ...",
+  "output": "async def run(self, query: str) -> str:\n    plan = await self.plan(query)\n    results = []\n    for step in plan:\n        result = await self.tools[step.tool].run(step.args)\n        results.append(result)\n    return self.format_results(results)"
+}
 ```
 
-### Pattern 2: Async Function
-```json
-{"instruction": "Create an async function that fetches data from a URL and returns the parsed JSON", "input": "import fetch from 'node-fetch';", "output": "async function fetchData(url) {\n  const response = await fetch(url);\n  return await response.json();\n}"}
-```
+## Extraction Rules Summary
 
-### Pattern 3: Class with Method
-```json
-{"instruction": "Create a class with a private property and a getter method", "input": "", "output": "class Container {\n  #value = null;\n\n  get value() {\n    return this.#value;\n  }\n\n  set value(v) {\n    this.#value = v;\n  }\n}"}
-```
+### General Rules
 
-### Pattern 4: Import Statement
-```json
-{"instruction": "Import a named export from a module", "input": "", "output": "import { createAgent } from '@package/module';"}
-```
+| Rule | Description |
+|------|-------------|
+| **Be Specific** | Include function/class names in instructions |
+| **Include Parameters** | Mention key parameters in instructions |
+| **Add Context** | Put imports/types in the `input` field |
+| **Complete Code** | Output should be full, valid code |
+| **Skip Tests** | Don't extract from test files |
 
-### Pattern 5: Error Handling
-```json
-{"instruction": "Implement try-catch error handling with logging", "input": "import { logger } from './logger';", "output": "try {\n  riskyOperation();\n} catch (error) {\n  logger.error('Operation failed:', error);\n  throw error;\n}"}
-```
+### Agent-Specific Rules
 
-## Quality Criteria
+| Rule | Description |
+|------|-------------|
+| **Identify Tools** | Recognize functions that wrap external APIs |
+| **Identify Skills** | Recognize reusable capability functions |
+| **Identify Configs** | Recognize configuration/dataclass patterns |
+| **Agent Patterns** | Recognize run loops, planning, execution patterns |
+| **Tool Names** | Include tool names in instructions |
+| **Capability Names** | Include skill/capability names in instructions |
 
-### Minimum Requirements for Each Entry
-1. **Valid JSON** - Must parse correctly
-2. **Three fields** - instruction, input, output (all strings)
-3. **Syntactically correct** - Code must be valid for its language
-4. **Self-contained** - Either complete or with clear context in `input`
+## Common Agent Instruction Templates
 
-### Quality Scoring
-- **High Quality**: Complete, self-contained, well-documented
-- **Medium Quality**: Functional but may require context
-- **Low Quality**: Fragmented, unclear, or incomplete
+| Code Pattern | Instruction |
+|--------------|-------------|
+| `class WebScraperTool:` | "Create a tool class named WebScraperTool for scraping web pages" |
+| `async def run(task):` | "Implement an async run method that processes a task" |
+| `def __init__(self, tools):` | "Create an agent constructor that accepts a list of tools" |
+| `async def execute_tool(name, args):` | "Create a method to execute a tool by name with error handling" |
+| `def format_output(results):` | "Create a method to format agent results as output" |
+| `@dataclass class Config:` | "Define an agent configuration dataclass" |
+| `async def plan(self, goal):` | "Create an async planning method that breaks down goals into steps" |
+| `def register_tool(self, tool):` | "Add a method to register a tool with the agent" |
+| `class SkillDatabase:` | "Create a skill class for database operations" |
+| `async def summarize(self, text):` | "Create a skill method to summarize text content" |
 
-## Output Format
+## Quality Checklist
 
-**Primary Format - Instruction Tuning:**
-```json
-{"instruction": "...", "input": "...", "output": "..."}
-```
+Before adding an entry:
 
-**Alternative Format - Conversational (Chat Fine-tuning):**
-```json
-{"messages": [{"role": "system", "content": "..."}, {"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]}
-```
-
-**NO markdown blocks, NO explanations, NO conversational text in output.**
-
-### Format Conversion
-
-| Instruction Format | Conversational Format |
-|-------------------|----------------------|
-| `instruction` | `user` message content |
-| `input` | Appended to user message (if meaningful context) |
-| `output` | `assistant` message content |
-| (fixed) | `system` message with expert programmer persona |
-
-**System Prompt Template:**
-```
-You are an expert programmer who writes clean, efficient, well-documented code.
-You understand multiple programming languages and frameworks. When asked to
-implement something, you provide complete, working code with appropriate
-imports and structure.
-```
-
-## Examples by Language
-
-### Python Example
-```json
-{"instruction": "Create a dataclass with fields and default values", "input": "from dataclasses import dataclass, field\nfrom typing import List", "output": "@dataclass\nclass Config:\n    name: str = \"default\"\n    items: List[str] = field(default_factory=list)"}
-```
-
-### TypeScript Example
-```json
-{"instruction": "Define an interface with optional properties", "input": "", "output": "interface User {\n  id: string;\n  name: string;\n  email?: string;\n  age?: number;\n}"}
-```
-
-### JavaScript Example
-```json
-{"instruction": "Create a promise that resolves after a delay", "input": "", "output": "function delay(ms) {\n  return new Promise(resolve => setTimeout(resolve, ms));\n}"}
-```
-
-### Go Example
-```json
-{"instruction": "Define a struct with JSON tags", "input": "", "output": "type User struct {\n\tID string `json:\"id\"`\n\tName string `json:\"name\"`\n\tEmail string `json:\"email,omitempty\"`\n}"}
-```
-
-## Advanced Techniques
-
-### Pattern: Progressive Disclosure
-For large patterns, extract at multiple levels:
-1. High-level: "Create a REST API endpoint handler"
-2. Mid-level: "Extract route parameter parsing"
-3. Low-level: "Parse query string parameters"
-
-### Pattern: Language Transformation
-When converting between languages:
-- Preserve semantics, not syntax
-- Map idioms appropriately
-- Handle language-specific features (e.g., Python's `self` vs JS/TS `this`)
-
-### Pattern: Framework Detection
-Identify and handle framework-specific patterns:
-- **Web**: Express, FastAPI, Flask, Django
-- **Mobile**: React Native, Flutter
-- **Desktop**: Electron, Tauri
-
-## HuggingFace Deployment
-
-### Installation
-```bash
-curl -LsSf https://hf.co/cli/install.sh | bash
-```
-
-### Authentication
-```bash
-hf auth login --token YOUR_TOKEN
-# or interactive:
-hf auth login
-```
-
-### Upload Dataset
-```bash
-# Create clean directory with:
-# - train.jsonl (conversational format)
-# - README.md (dataset card with metadata)
-
-hf upload username/dataset-name . --repo-type=dataset
-```
-
-### README Metadata Template
-```yaml
----
-license: mit
-task_categories:
-  - text-generation
-language:
-  - en
-  - code
-size_categories:
-  - n<1K
----
-```
-
-### Valid Metadata Values
-- **task_categories**: text-classification, token-classification, question-answering, translation, summarization, text-generation
-- **language**: ISO 639-1/639-2/639-3 codes (en, code, multilingual)
-- **size_categories**: n<1K, 1K<n<10K, 10K<n<100K, 100K<n<1M, n>1M
-
-## Extending the Skill
-
-To add support for new languages:
-
-1. **Map syntax** - Add language → canonical pattern mapping
-2. **Extract patterns** - Identify common idioms in the language
-3. **Create examples** - Generate sample JSONL entries
-4. **Test extraction** - Validate on real codebases
+- [ ] Instruction is specific (includes function/class name)
+- [ ] Instruction captures agent context (tool, skill, config, etc.)
+- [ ] Input contains necessary imports
+- [ ] Output is complete code
+- [ ] Output is syntactically valid
+- [ ] Entry is not a duplicate
+- [ ] Entry is not from a test file
 
 ## References
 
-- **Language patterns**: See [references/patterns.md](references/patterns.md)
-- **Language mappings**: See [references/languages.md](references/languages.md)
-- **Instruction templates**: See [references/instructions.md](references/instructions.md)
+For detailed patterns:
+- [references/patterns.md](references/patterns.md)
+- [references/languages.md](references/languages.md)
+- [references/instructions.md](references/instructions.md)
