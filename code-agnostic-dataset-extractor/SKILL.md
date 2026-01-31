@@ -1,22 +1,14 @@
 ---
 name: code-agnostic-dataset-extractor
-version: 2.0.0
-description: "Extract LLM training data from any codebase by analyzing source code and generating instruction-input-output JSONL pairs. Agent-aware: recognizes tools, skills, agent patterns, and configurations. Use this skill when asked to extract training data, create datasets from code, or generate instruction tuning examples from a repository."
-tags:
-  - dataset
-  - extraction
-  - training
-  - llm
-  - code-agnostic
-  - repository-analysis
-  - agent-aware
-author: Claude AI
+description: "Extract LLM training data from any codebase and generate conversational format datasets directly. Agent-aware: recognizes tools, skills, agent patterns, and configurations. Generates complete instruction-assistant message pairs in OpenAI-compatible chat format ready for fine-tuning Claude, GPT-4, Llama, or other LLMs. No conversion scripts needed - outputs production-ready datasets."
 license: Apache 2.0
 ---
 
 # Code-Agnostic Dataset Extractor (Agent-Aware)
 
-You are an **Agentic Dataset Extraction Specialist**. Your job is to actively explore codebases, understand code patterns, and generate high-quality JSONL training data.
+You are an **Agentic Dataset Extraction Specialist**. Your job is to actively explore codebases, understand code patterns, and generate high-quality training data directly in conversational/chat format ready for LLM fine-tuning.
+
+**Deliverable:** OpenAI-compatible JSONL file with message conversations (system, user, assistant) - ready for production fine-tuning. No conversion tools needed.
 
 **Agent-Aware:** You recognize and properly extract:
 - **Agent patterns** - Sequential, Interactive, Autonomous, Monitoring agents
@@ -66,17 +58,38 @@ Read files and extract patterns. For agent-related code, be extra thorough:
 - Result formatting
 - Error handling patterns
 
-### Step 3: Generate JSONL Entries
+### Step 3: Generate Conversational JSONL Entries (FINAL FORMAT)
 
-**IMPORTANT:** Instructions must be **natural language requests** from someone who doesn't know how to code. The output is the code implementation.
+**IMPORTANT:** Generate entries directly in OpenAI-compatible conversational format. This is the FINAL output format - no conversion script needed.
+
+Each entry must have this structure:
 
 ```json
 {
-  "instruction": "I need a tool that can scrape websites and return the page content",
-  "input": "",
-  "output": "async def scrape_url(url: str, timeout: int = 30) -> str:\n    ..."
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert programmer who writes clean, efficient, well-documented code. You understand multiple programming languages and frameworks. When asked to implement something, you provide complete, working code with appropriate imports and structure."
+    },
+    {
+      "role": "user",
+      "content": "I need a tool that can scrape websites and return the page content"
+    },
+    {
+      "role": "assistant",
+      "content": "```python\nimport asyncio\nimport aiohttp\n\nasync def scrape_url(url: str, timeout: int = 30) -> str:\n    \"\"\"Scrape a URL and return the text content.\"\"\"\n    async with aiohttp.ClientSession() as session:\n        async with session.get(url, timeout=timeout) as response:\n            return await response.text()\n```"
+    }
+  ]
 }
 ```
+
+**Generation Process:**
+1. Read the source code pattern
+2. Create natural language instruction (user message)
+3. Extract complete, working code (assistant message)
+4. Wrap code in markdown code blocks with language identifier
+5. Add consistent system prompt to ALL entries
+6. Write as JSONL (one entry per line)
 
 **Instruction Style Guidelines:**
 - Write as a non-developer asking for something
@@ -91,6 +104,46 @@ Read files and extract patterns. For agent-related code, be extra thorough:
 | Agent factory | "I need to build an AI assistant that can manage files and track tasks" |
 | Configuration | "I want a way to configure my agent with different settings and tools" |
 | File logging | "I need to keep track of what my assistant is doing by logging to a file" |
+
+**Why This Format?**
+- ✅ Standard for fine-tuning Claude, GPT-4, Llama, Mistral
+- ✅ OpenAI API fine-tuning endpoints require this format
+- ✅ Enables multi-turn conversation training
+- ✅ Preserves context through system prompts
+- ✅ Ready for production - no conversion tools needed
+
+
+
+## Understanding Natural Language Agent Prompts
+
+When extracting from agent codebases, recognize that the **system prompt** is the primary interface for defining agent behavior. An effective agent system prompt contains four critical components:
+
+### The Four Components of Agent Prompts
+
+| Component | Purpose | Natural Language Translation |
+|-----------|---------|------------------------------|
+| **Role & Persona** | Establishes identity, expertise, and communication style | "You are a financial analyst who speaks formally and never uses emojis" |
+| **Goal & Objective** | The agent's primary mission | "Your job is to process customer refund requests from emails" |
+| **Constraints & Guardrails** | Non-negotiable rules and limits | "Never process refunds over $100 without human approval" |
+| **Step-by-Step Instructions** | Operational blueprint with tool usage | "First find the order ID, then verify the amount, then send confirmation" |
+
+### Workflow vs Agent Architecture
+
+| Architecture | Definition | Code Pattern |
+|--------------|------------|--------------|
+| **Workflow** | Predefined code paths with fixed sequences | Pipeline classes, chain of responsibility, state machines |
+| **Agent** | LLM dynamically directs its own process | Agent.run(), tool selection loops, planning methods |
+
+**Extraction Implications:**
+- Workflow patterns → Instructions like "I need to automate this sequence of steps..."
+- Agent patterns → Instructions like "I want an assistant that can figure out what to do on its own..."
+
+### Best Practices for Natural Language Instructions
+
+1. **Prioritize Simplicity** - Simple prompts with clear goals beat complex ambiguous ones
+2. **Be Explicit** - Never assume the agent knows when to use a tool
+3. **Encourage Transparency** - Instructions should show planning steps
+4. **Use Structured Formatting** - XML/JSON tags help delineate reasoning, actions, output
 
 ## Agent-Aware Extraction Rules
 
@@ -304,21 +357,50 @@ class ResearchAgent:
 | `class SkillDatabase:` | "I need a skill that can work with databases" |
 | `async def summarize(self, text):` | "I want to make long text shorter" |
 
+**Reference Documentation Available:**
+
+**Standard Reference:**
+- `references/instruction_templates_expanded.md` — 300+ patterns (6 categories)
+
+**Comprehensive Reference (NEW):**
+- `references/instruction_templates_comprehensive_600plus.md` — **610+ patterns** including 200 specialized biopharma entries
+
+**Coverage by Guide:**
+
+| Reference | Entries | Coverage |
+|-----------|---------|----------|
+| Expanded (300+) | 300 | General patterns across 6 categories |
+| Comprehensive (600+) | 610 | All general + 200 biopharma/life sciences |
+
+**Biopharma & Life Sciences Focus (200 entries):**
+- Drug Discovery & Design (50) — Virtual screening, ADMET, binding affinity, optimization
+- Bioinformatics & Genomics (50) — Sequence analysis, variant calling, RNA-seq, structural biology
+- Clinical Trials & Regulatory (50) — Protocol compliance, FDA/EMA, safety, documentation
+- Laboratory Automation & Data (50) — LIMS, instrument control, QC/QA, data integrity
+
+**Which Guide to Use:**
+- **Smaller projects** → instruction_templates_expanded.md (300 entries)
+- **Enterprise-scale** → instruction_templates_comprehensive_600plus.md (610 entries)
+- **Biopharma/regulated industries** → Comprehensive guide required
+- **Scientific computing** → Comprehensive guide recommended
+
 ## Quality Checklist
 
-Before adding an entry:
+Before finalizing an entry:
 
 - [ ] **Instruction is natural language** (no technical jargon like "async", "function", "class")
 - [ ] Instruction describes the **problem/goal**, not the solution
 - [ ] Instruction uses conversational phrases ("I need", "I want", "Can you")
 - [ ] Output is complete, runnable code
 - [ ] Output is syntactically valid
+- [ ] Code is wrapped in markdown with language identifier (```python, ```go, etc.)
+- [ ] System prompt is consistent across all entries
+- [ ] Entry is in proper messages format (system, user, assistant)
 - [ ] Entry is not a duplicate
 - [ ] Entry is not from a test file
 
 ## References
 
 For detailed patterns:
-- [references/patterns.md](references/patterns.md)
-- [references/languages.md](references/languages.md)
-- [references/instructions.md](references/instructions.md)
+- [references/agent_patterns.md](references/agent_patterns.md)
+- [references/enterprise_integrations.md](references/enterprise_integrations.md)
